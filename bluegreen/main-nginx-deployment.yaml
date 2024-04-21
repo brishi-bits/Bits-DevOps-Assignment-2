@@ -1,0 +1,76 @@
+# File: main-nginx-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assignment-deployment
+  labels:
+    app: assignment
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: assignment
+  template:
+    metadata:
+      labels:
+        app: assignment
+    spec:
+      containers:
+      - name: assignment
+        image: brishi1022/assignmentpushfromgithub:latest
+        ports:
+        - containerPort: 5000
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: assignment-rollout
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: assignment
+  strategy:
+    blueGreen:
+      activeService: assignment-service
+      previewService: assignment-preview-service
+      autoPromotionEnabled: true
+  template:
+    metadata:
+      labels:
+        app: assignment
+    spec:
+      containers:
+      - name: assignment
+        image: brishi1022/assignmentpushfromgithub:1
+        ports:
+        - containerPort: 80
+---
+# Nodeport service to expose the application
+apiVersion: v1
+kind: Service
+metadata:
+  name: assignment-service
+  namespace: default
+spec:
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: assignment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assignment-preview-service
+  namespace: default
+spec:
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: nginx
